@@ -1,10 +1,12 @@
+import streamlit as st
 import heapq
+import pandas as pd
+
 
 def dijkstra(graph, source):
     """
     Dijkstra's Algorithm using Min-Heap
     Time: O((V + E) log V), Space: O(V)
-    graph: dict {u: [(v, weight), ...]}, 0-indexed
     """
     n = len(graph)
     dist = [float('inf')] * n
@@ -41,12 +43,12 @@ def reconstruct_path(prev, source, target):
 
     path.reverse()
 
-    if path[0] == source:
+    if path and path[0] == source:
         return path
     return []
 
 
-# --- Graph Definition (Adjacency List) ---
+# Graph Definition
 graph = {
     0: [(1, 4), (2, 1)],
     1: [(3, 1)],
@@ -56,15 +58,48 @@ graph = {
     5: []
 }
 
-source = 0
-dist, prev = dijkstra(graph, source)
 
-print(f'Shortest paths from vertex {source}:')
-print(f'{"Vertex":>8} {"Distance":>10} {"Path":>30}')
-print('-' * 55)
+# Streamlit UI
+st.set_page_config(page_title="Dijkstra Algorithm", layout="wide")
 
-for v in range(len(graph)):
-    path = reconstruct_path(prev, source, v)
-    path_str = ' -> '.join(map(str, path)) if path else 'No path'
-    d = dist[v] if dist[v] != float('inf') else 'INF'
-    print(f'{v:>8} {str(d):>10} {path_str:>30}')
+st.title("🚀 Dijkstra's Shortest Path Algorithm")
+
+st.subheader("Graph")
+st.code(str(graph), language="python")
+
+source = st.selectbox(
+    "Select Source Vertex",
+    list(graph.keys()),
+    index=0
+)
+
+if st.button("Find Shortest Paths"):
+    dist, prev = dijkstra(graph, source)
+
+    results = []
+
+    for v in range(len(graph)):
+        path = reconstruct_path(prev, source, v)
+
+        results.append({
+            "Vertex": v,
+            "Distance": dist[v] if dist[v] != float('inf') else "INF",
+            "Path": " -> ".join(map(str, path)) if path else "No Path"
+        })
+
+    st.success(f"Shortest paths from vertex {source}")
+
+    df = pd.DataFrame(results)
+    st.dataframe(df, use_container_width=True)
+
+    st.subheader("Path Details")
+
+    for row in results:
+        st.write(
+            f"**Vertex {row['Vertex']}** | "
+            f"Distance: **{row['Distance']}** | "
+            f"Path: **{row['Path']}**"
+        )
+
+st.markdown("---")
+st.info("Time Complexity: O((V + E) log V)")

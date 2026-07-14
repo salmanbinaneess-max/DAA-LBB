@@ -1,101 +1,104 @@
-import time
-import random
-import sys
+import streamlit as st
+import heapq
+import pandas as pd
 
-def interpolation_search(arr, target):
-    """
-    Interpolation Search Algorithm
-    Time Complexity: O(log log n) average, O(n) worst case
-    Space Complexity: O(1)
-    """
-    low, high = 0, len(arr) - 1
-    comparisons = 0
+# ----------------------------
+# Dijkstra Algorithm
+# ----------------------------
+def dijkstra(graph, source):
+    n = len(graph)
+    dist = [float('inf')] * n
+    prev = [None] * n
 
-    while low <= high and arr[low] <= target <= arr[high]:
-        comparisons += 1
+    dist[source] = 0
+    pq = [(0, source)]
+    visited = set()
 
-        if low == high:
-            if arr[low] == target:
-                return low, comparisons
-            return -1, comparisons
+    while pq:
+        d, u = heapq.heappop(pq)
 
-        # Avoid division by zero
-        if arr[high] == arr[low]:
-            break
+        if u in visited:
+            continue
 
-        # Interpolation formula
-        pos = low + int(
-            ((target - arr[low]) * (high - low))
-            / (arr[high] - arr[low])
+        visited.add(u)
+
+        for v, w in graph[u]:
+            if dist[u] + w < dist[v]:
+                dist[v] = dist[u] + w
+                prev[v] = u
+                heapq.heappush(pq, (dist[v], v))
+
+    return dist, prev
+
+
+def reconstruct_path(prev, source, target):
+    path = []
+    node = target
+
+    while node is not None:
+        path.append(node)
+        node = prev[node]
+
+    path.reverse()
+
+    if path and path[0] == source:
+        return path
+    return []
+
+
+# ----------------------------
+# Sample Graph
+# ----------------------------
+graph = {
+    0: [(1, 4), (2, 1)],
+    1: [(3, 1)],
+    2: [(1, 2), (3, 5)],
+    3: [(4, 3)],
+    4: [(5, 2)],
+    5: []
+}
+
+# ----------------------------
+# Streamlit UI
+# ----------------------------
+st.set_page_config(page_title="Dijkstra Visualizer", layout="wide")
+
+st.title("🚀 Dijkstra's Shortest Path Algorithm")
+st.write("Find shortest paths from a selected source vertex.")
+
+source = st.selectbox(
+    "Select Source Vertex",
+    options=list(graph.keys()),
+    index=0
+)
+
+if st.button("Run Dijkstra"):
+    dist, prev = dijkstra(graph, source)
+
+    results = []
+
+    for v in range(len(graph)):
+        path = reconstruct_path(prev, source, v)
+
+        results.append({
+            "Vertex": v,
+            "Distance": dist[v] if dist[v] != float('inf') else "INF",
+            "Path": " -> ".join(map(str, path)) if path else "No Path"
+        })
+
+    st.success("Algorithm Completed!")
+
+    df = pd.DataFrame(results)
+    st.dataframe(df, use_container_width=True)
+
+    st.subheader("Detailed Results")
+
+    for row in results:
+        st.write(
+            f"**Vertex {row['Vertex']}** | "
+            f"Distance: **{row['Distance']}** | "
+            f"Path: **{row['Path']}**"
         )
 
-        if arr[pos] == target:
-            return pos, comparisons
-        elif arr[pos] < target:
-            low = pos + 1
-        else:
-            high = pos - 1
-
-    return -1, comparisons
-
-
-def binary_search(arr, target):
-    """
-    Binary Search for comparison
-    """
-    low, high = 0, len(arr) - 1
-    comparisons = 0
-
-    while low <= high:
-        comparisons += 1
-        mid = (low + high) // 2
-
-        if arr[mid] == target:
-            return mid, comparisons
-        elif arr[mid] < target:
-            low = mid + 1
-        else:
-            high = mid - 1
-
-    return -1, comparisons
-
-
-def performance_analysis():
-    sizes = [1000, 5000, 10000, 50000, 100000]
-
-    print(f"{'Size':>10} {'IS Time(ms)':>14} {'BS Time(ms)':>14} "
-          f"{'IS Comparisons':>16} {'BS Comparisons':>16}")
-    print("-" * 75)
-
-    for size in sizes:
-        arr = sorted(random.sample(range(size * 10), size))
-        target = arr[random.randint(0, size - 1)]
-
-        # Interpolation Search timing
-        start = time.perf_counter()
-        for _ in range(100):
-            idx_is, comp_is = interpolation_search(arr, target)
-        is_time = (time.perf_counter() - start) / 100 * 1000
-
-        # Binary Search timing
-        start = time.perf_counter()
-        for _ in range(100):
-            idx_bs, comp_bs = binary_search(arr, target)
-        bs_time = (time.perf_counter() - start) / 100 * 1000
-
-        print(f"{size:>10} {is_time:>14.4f} {bs_time:>14.4f} "
-              f"{comp_is:>16} {comp_bs:>16}")
-
-
-# --- Main ---
-arr = [2, 5, 10, 15, 23, 35, 48, 60, 75, 90, 105, 120]
-target = 35
-
-idx, comps = interpolation_search(arr, target)
-
-print(f"Array: {arr}")
-print(f"Searching for: {target}")
-print(f"Found at index: {idx}, Comparisons: {comps}")
-print()
-
-performance_analysis()
+st.markdown("---")
+st.caption("Time Complexity: O((V + E) log V)")
